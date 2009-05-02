@@ -10,15 +10,17 @@ File.open("#{ARGV}") do |handle|
 
 	# Pilha de relacoes
 	rel_stack = []
+	rs_sym = lambda {rel_stack.last[0]}
+	rs_arg = lambda {rel_stack.last[1]}
+
 
 	# Hash das relacoes
-	relations_hash = Hash.new
-
-	# Flag para empilhar a proxima relacao lida
-	empilha = false
+	rel_hash = Hash.new
 	
+	# Flag para empilhar a proxima relacao
+	empilha = false
 
-
+	
 	handle.each_line do |linha|
 
 		# Ignora comentarios e linhas vazias
@@ -26,12 +28,15 @@ File.open("#{ARGV}") do |handle|
 			next
 		end
 		
-		print "$"+linha
+		puts " ----------- ::#{linha.chomp} :: -------------"
 
 		# Separa a string da linha para iteracao
 		l_elems = linha.scan(/\w+|\(|\)|\<\=|\~\w+|\&|\^|\,|\?w+/)
 
 		l_elems.each do |elem|
+			print "elem :: \'#{elem}\'\n"
+			puts "empilha :: #{empilha}"
+
 			case elem
 
 			# Ativa flag para empilhar a proxima relacao
@@ -52,48 +57,49 @@ File.open("#{ARGV}") do |handle|
 				# Aumenta o numero de argumentos
 				rel_stack.last[1] += 1
 
-			when /\w+/, /\~\w+/
-				
-				# Relacao encontrada. Empilha e zera o numero de argumentos
-				if empilha
-					empilha = false
-					rel_stack << [elem.to_sym , 0]
-				# Relacao sem argumentos. Incremente o numero de args da relacao pai
-				else
-					rel_stack.last[1] += 1
-				end
+
+			when /\w+/, /\~\w+/, "<="
+				# Transforma o elemento em symbol
+				elem = elem.to_sym
 
 				# Caso nao exista, adiciona relacao na hash
-				if not relations_hash.has_key?(elem.to_sym) 
-					relations_hash[elem.to_sym] = []
+				if not rel_hash.has_key?(elem) 
+					rel_hash[elem] = []
 				end
 
-				# Adiciona argumento na lista da relacao que esta no
-				# topo da pilha
-				if relations_hash[rel_stack.last[0]][rel_stack.last[1]] == nil
-					relations_hash[rel_stack.last[0]][rel_stack.last[1]] = []
-				end
+				# Se pilha nao vazia, aumenta o numero de args da relacao do topo
+				if not rel_stack.empty?
+					rel_stack.last[1] += 1				
 
-				if not rel_stack.last[0] == elem.to_sym 						
-					if not
-					relations_hash[rel_stack.last[0]][rel_stack.last[1]].include?(elem.to_sym) 
-						relations_hash[rel_stack.last[0]][rel_stack.last[1]] <<
-							elem.to_sym 
+					# Adiciona argumento na lista da relacao do topo
+					if not rel_hash[rs_sym.call].nil?
+						if rel_hash[rs_sym.call][rs_arg.call].nil?
+							rel_hash[rs_sym.call][rs_arg.call] = []
+						end
+						if not rel_hash[rs_sym.call][rs_arg.call].include?(elem)
+							rel_hash[rs_sym.call][rs_arg.call] << elem						
+						end
 					end
-				end
 					
+				end
+				
+				# Empilha
+				if empilha
+					rel_stack << [elem , 0]
+				end
+					empilha = false
 				
 			end
-
-			print "= '"+elem+"' -> ["
+			elem = elem.to_s
+			print "rel_stack :: ["
 			rel_stack.each { |e| print "'#{e}' "}
 			print "]\n"
 			
-			print ">> "
-			relations_hash.each do |e| 
+			print "rels_hash ::\n"
+			rel_hash.each do |e| 
 				e.each do |l|
 					if l.class == :teste.class
-						print "#{l} -> "
+						print "   #{l} -> "
 					else
 						l.each do |x|
 							if not x == nil
@@ -107,7 +113,7 @@ File.open("#{ARGV}") do |handle|
 				print "\n"
 			end
 				
-			print "<<\n\n"
+			print "</::>\n\n"
 
 			
 			
